@@ -1,0 +1,102 @@
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.0;
+
+contract EnergyMarketplace {
+    // Struct to represent a solar system owner
+    struct SolarSystemOwner {
+        uint256 energyProduction; // Energy production of the solar system
+        uint256 energyConsumption; // Energy consumption of the owner
+        uint256 energyBalance; // Energy balance of the owner
+        uint256 energyPrice; // Price per unit of energy in wei
+        bool isRegistered; // Flag to check if the owner is registered
+    }
+
+    // Mapping to store solar system owners
+    mapping(address => SolarSystemOwner) public solarSystemOwners;
+
+    // Event for energy purchase
+    event EnergyPurchase(
+        address buyer,
+        address seller,
+        uint256 energyAmount,
+        uint256 totalPrice
+    );
+
+    // Function to register a solar system owner
+    function registerSolarSystemOwner(
+        uint256 _energyProduction,
+        uint256 _energyConsumption,
+        uint256 _energyPrice
+    ) external {
+        // Check if the owner is not already registered
+        require(
+            !solarSystemOwners[msg.sender].isRegistered,
+            "Owner already registered"
+        );
+
+        // Create a new solar system owner
+        solarSystemOwners[msg.sender] = SolarSystemOwner({
+            energyProduction: _energyProduction,
+            energyConsumption: _energyConsumption,
+            energyBalance: 0,
+            energyPrice: _energyPrice,
+            isRegistered: true
+        });
+    }
+
+    // Function to purchase energy from a solar system owner
+    function purchaseEnergy(address _seller, uint256 _energyAmount)
+        external
+        payable
+    {
+        // Check if the seller is a registered solar system owner
+        require(
+            solarSystemOwners[_seller].isRegistered,
+            "Seller not registered"
+        );
+
+        // Calculate the total price
+        uint256 totalPrice =
+            _energyAmount * solarSystemOwners[_seller].energyPrice;
+
+        // Check if the buyer has enough balance to make the purchase
+        require(msg.value >= totalPrice, "Insufficient funds");
+
+        // Update the energy balances of the buyer and seller
+        solarSystemOwners[msg.sender].energyBalance += _energyAmount;
+        solarSystemOwners[_seller].energyBalance -= _energyAmount;
+
+        // Transfer the funds to the seller
+        payable(_seller).transfer(totalPrice);
+
+        // Emit the energy purchase event
+        emit EnergyPurchase(
+            msg.sender,
+            _seller,
+            _energyAmount,
+            totalPrice
+        );
+    }
+
+    // Function to retrieve the energy balance of a solar system owner
+    function getEnergyBalance(address _owner) external view returns (uint256) {
+        return solarSystemOwners[_owner].energyBalance;
+    }
+
+    // Function to retrieve the energy price of a solar system owner
+    function getEnergyPrice(address _owner) external view returns (uint256) {
+        return solarSystemOwners[_owner].energyPrice;
+    }
+
+    // Function to update the energy price of a solar system owner
+    function updateEnergyPrice(uint256 _newPrice) external {
+        // Check if the caller is a registered solar system owner
+        require(
+            solarSystemOwners[msg.sender].isRegistered,
+            "Caller not registered"
+        );
+
+        // Update the energy price
+        solarSystemOwners[msg.sender].energyPrice = _newPrice;
+    }
+}
